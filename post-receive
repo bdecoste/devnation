@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# An example hook script for the "post-receive" event.
+#
+# The "post-receive" script is run after receive-pack has accepted a pack
+# and the repository has been updated.  It is passed arguments in through
+# stdin in the form
+#  <oldrev> <newrev> <refname>
+# For example:
+#  aa453216d1b3e49e7f6f98441fa56946ddcd6a20 68f7abf4e6f922807889f52bc043ecd31b79f814 refs/heads/master
+#
+# see contrib/hooks/ for a sample, or uncomment the next line and
+# rename the file to "post-receive".
+
+#. /usr/share/git-core/contrib/hooks/post-receive-email
+
+echo "!!!!!! post-receive"
+sha=`git log -1 HEAD | head -1 | awk '{print $2;}'`
+message=`git log -1 HEAD | tail -1`
+
+USER="bdecoste"
+OPENSHIFT_GIT="ssh://5345e5266892df06190001da@demo-demo.example.com/~/git/demo.git/"
+SOURCE_GIT="/mnt/extra/git/project.git"
+KEY="[OPENSHIFT]"
+
+echo "${sha}"
+echo "${message}"
+
+if [[ ${message} == *${KEY}* ]]
+then
+  git clone ${OPENSHIFT_GIT} /mnt/extra/tmp/${sha} 
+
+  pushd /mnt/extra/tmp/${sha}
+      
+  unset GIT_DIR
+  unset GIT_WORK_TREE
+
+  git remote add upstream ${SOURCE_GIT}
+
+  git fetch upstream
+echo "checkout"
+  git checkout -b upstream upstream/master
+
+  git config --global user.name "${USER}"
+echo "master"
+  git checkout master
+echo "merge"
+  git merge upstream -m "test" -X theirs
+echo "push"
+  git push
+
+  popd
+fi
+
+#rm -rf /mnt/extra/tmp/${sha}
+

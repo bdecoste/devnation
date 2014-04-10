@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <logRotator class="hudson.tasks.LogRotator">
+    <daysToKeep>10</daysToKeep>
+    <numToKeep>100</numToKeep>
+    <artifactDaysToKeep>-1</artifactDaysToKeep>
+    <artifactNumToKeep>-1</artifactNumToKeep>
+  </logRotator>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.plugins.openshift.OpenShiftBuilderSizeJobProperty plugin="openshift@1.4">
+      <builderSize>small</builderSize>
+    </hudson.plugins.openshift.OpenShiftBuilderSizeJobProperty>
+    <hudson.plugins.openshift.OpenShiftBuilderTimeoutJobProperty plugin="openshift@1.4">
+      <builderTimeout>300000</builderTimeout>
+    </hudson.plugins.openshift.OpenShiftBuilderTimeoutJobProperty>
+    <hudson.plugins.openshift.OpenShiftBuilderTypeJobProperty plugin="openshift@1.4">
+      <builderType>diy-0.1</builderType>
+    </hudson.plugins.openshift.OpenShiftBuilderTypeJobProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>demo_pull_request</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/sh
+
+USER=&quot;wdecoste&quot;
+REPO=&quot;kitchensink-example&quot;
+OPENSHIFT_GIT=&quot;ssh://5346ac3e6892df0619000221@demo-demo.example.com/~/git/demo.git/&quot;
+SOURCE_GIT=&quot;https://github.com/wdecoste/kitchensink-example.git&quot;
+APP_NAME=&quot;demo&quot;
+KEY=&quot;[OPENSHIFT]&quot;
+BASE_DIR=&quot;/mnt/extra&quot;
+PULL_FILE=&quot;${BASE_DIR}/demo_pull.txt&quot;
+TMP_DIR=&quot;/mnt/extra/tmp&quot;
+
+pulls=`wget -q -O - &quot;https://api.github.com/repos/${USER}/${REPO}/pulls&quot;`
+
+max=$(&lt;${PULL_FILE})
+echo &quot;Last Pull Request: ${max}&quot;
+
+title=`echo &quot;${pulls}&quot; | ${BASE_DIR}/jsawk &apos;return this.title&apos;`
+echo &quot;Title: ${title}&quot;
+
+if [[ ${title} == *${KEY}* ]]
+then
+
+  pull=`echo &quot;${pulls}&quot; | ${BASE_DIR}/jsawk &apos;return this.number&apos; | cut -d&apos;[&apos; -f 2 | cut -d&apos;]&apos; -f 1`
+  echo &quot;Pull Request: ${pull}&quot;
+
+  if [[ ${pull} &gt; ${max} ]]
+  then
+
+    echo &quot;Pushing changes to OpenShift&quot;
+
+    git clone ${OPENSHIFT_GIT} ${TMP_DIR}/${APP_NAME}
+
+    pushd ${TMP_DIR}/${APP_NAME}
+
+    git remote add upstream ${SOURCE_GIT}
+
+    sed -i &apos;s/\/upstream\/*/\/upstream\/*\n\tfetch = +refs\/pull\/*\/head:refs\/pull\/upstream\//g&apos; ${TMP_DIR}/${APP_NAME}/.git/config
+
+    git fetch upstream
+
+    git checkout -b ${pull} pull/upstream/${pull}
+
+    git checkout master
+
+    git merge ${pull} -m &quot;test&quot;
+
+    git push
+
+    echo &quot;${pull}&quot; &gt; &quot;${PULL_FILE}&quot;
+
+    popd
+  fi
+fi
+
+rm -rf ${TMP_DIR}/${APP_NAME}</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>
