@@ -34,13 +34,13 @@
 
 USER=&quot;wdecoste&quot;
 REPO=&quot;kitchensink-example&quot;
-OPENSHIFT_GIT=&quot;ssh://5346ac3e6892df0619000221@demo-demo.example.com/~/git/demo.git/&quot;
+OPENSHIFT_GIT=&quot;ssh://534804076892df0619000474@demo-demo.example.com/~/git/demo.git/&quot;
 SOURCE_GIT=&quot;https://github.com/wdecoste/kitchensink-example.git&quot;
 APP_NAME=&quot;demo&quot;
 KEY=&quot;[OPENSHIFT]&quot;
-BASE_DIR=&quot;/mnt/extra&quot;
+BASE_DIR=&quot;/usr/share/demo&quot;
 PULL_FILE=&quot;${BASE_DIR}/demo_pull.txt&quot;
-TMP_DIR=&quot;/mnt/extra/tmp&quot;
+TMP_DIR=&quot;/usr/share/demo&quot;
 
 pulls=`wget -q -O - &quot;https://api.github.com/repos/${USER}/${REPO}/pulls&quot;`
 
@@ -52,6 +52,7 @@ echo &quot;Title: ${title}&quot;
 
 if [[ ${title} == *${KEY}* ]]
 then
+  echo &quot;${KEY} found. Beginning Gear merge&quot;
 
   pull=`echo &quot;${pulls}&quot; | ${BASE_DIR}/jsawk &apos;return this.number&apos; | cut -d&apos;[&apos; -f 2 | cut -d&apos;]&apos; -f 1`
   echo &quot;Pull Request: ${pull}&quot;
@@ -75,13 +76,15 @@ then
 
     git checkout master
 
-    git merge ${pull} -m &quot;test&quot;
+    git merge ${pull} -m &quot;test&quot; -X theirs
 
     git push
 
     echo &quot;${pull}&quot; &gt; &quot;${PULL_FILE}&quot;
 
     popd
+  else
+    echo &quot;${KEY} not found. No additional processing in post-receive hook&quot;
   fi
 fi
 

@@ -14,12 +14,12 @@
 
 #. /usr/share/git-core/contrib/hooks/post-receive-email
 
-echo "!!!!!! post-receive"
+echo "-------- Running custom post-receive hook"
 sha=`git log -1 HEAD | head -1 | awk '{print $2;}'`
 message=`git log -1 HEAD | tail -1`
 
 USER="bdecoste"
-OPENSHIFT_GIT="ssh://5345e5266892df06190001da@demo-demo.example.com/~/git/demo.git/"
+OPENSHIFT_GIT="ssh://5347fae26892df0619000409@demo-demo.example.com/~/git/demo.git/"
 SOURCE_GIT="/mnt/extra/git/project.git"
 KEY="[OPENSHIFT]"
 
@@ -28,6 +28,8 @@ echo "${message}"
 
 if [[ ${message} == *${KEY}* ]]
 then
+  echo "${KEY} found. Beginning Gear merge in post-receive hook"
+
   git clone ${OPENSHIFT_GIT} /mnt/extra/tmp/${sha} 
 
   pushd /mnt/extra/tmp/${sha}
@@ -38,18 +40,20 @@ then
   git remote add upstream ${SOURCE_GIT}
 
   git fetch upstream
-echo "checkout"
+
   git checkout -b upstream upstream/master
 
   git config --global user.name "${USER}"
-echo "master"
+
   git checkout master
-echo "merge"
+
   git merge upstream -m "test" -X theirs
-echo "push"
+
   git push
 
   popd
+else
+  echo "${KEY} not found. No additional processing in post-receive hook"
 fi
 
 #rm -rf /mnt/extra/tmp/${sha}
