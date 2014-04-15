@@ -1,7 +1,6 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<project>
+<?xml version="1.0" encoding="UTF-8"?><project>
   <actions/>
-  <description></description>
+  <description/>
   <logRotator class="hudson.tasks.LogRotator">
     <daysToKeep>10</daysToKeep>
     <numToKeep>100</numToKeep>
@@ -32,35 +31,37 @@
     <hudson.tasks.Shell>
       <command>#!/bin/sh
 
-USER=&quot;wdecoste&quot;
-REPO=&quot;kitchensink-example&quot;
-OPENSHIFT_GIT=&quot;ssh://534804076892df0619000474@demo-demo.example.com/~/git/demo.git/&quot;
-SOURCE_GIT=&quot;https://github.com/wdecoste/kitchensink-example.git&quot;
-APP_NAME=&quot;demo&quot;
-KEY=&quot;[OPENSHIFT]&quot;
-BASE_DIR=&quot;/usr/share/demo&quot;
-PULL_FILE=&quot;${BASE_DIR}/demo_pull.txt&quot;
-TMP_DIR=&quot;/usr/share/demo&quot;
+USER="wdecoste"
+REPO="kitchensink-example"
+OPENSHIFT_GIT="ssh://534d8ea56892df5e750001b5@demo-demo.example.com/~/git/demo.git/"
+SOURCE_GIT="https://github.com/wdecoste/kitchensink-example.git"
+APP_NAME="demo"
+KEY="[OPENSHIFT]"
+BASE_DIR="/usr/share/demo"
+PULL_FILE="${BASE_DIR}/demo_pull.txt"
+TMP_DIR="/usr/share/demo"
 
-pulls=`wget -q -O - &quot;https://api.github.com/repos/${USER}/${REPO}/pulls&quot;`
+echo "Checking for pull requests ..."
+
+pulls=`wget -q -O - "https://api.github.com/repos/${USER}/${REPO}/pulls"`
 
 max=$(&lt;${PULL_FILE})
-echo &quot;Last Pull Request: ${max}&quot;
+echo "Last Pull Request: ${max}"
 
-title=`echo &quot;${pulls}&quot; | ${BASE_DIR}/jsawk &apos;return this.title&apos;`
-echo &quot;Title: ${title}&quot;
+title=`echo "${pulls}" | ${BASE_DIR}/jsawk 'return this.title'`
+echo "Title: ${title}"
 
 if [[ ${title} == *${KEY}* ]]
 then
-  echo &quot;${KEY} found. Beginning Gear merge&quot;
+  echo "${KEY} found. Beginning Gear merge"
 
-  pull=`echo &quot;${pulls}&quot; | ${BASE_DIR}/jsawk &apos;return this.number&apos; | cut -d&apos;[&apos; -f 2 | cut -d&apos;]&apos; -f 1`
-  echo &quot;Pull Request: ${pull}&quot;
+  pull=`echo "${pulls}" | ${BASE_DIR}/jsawk 'return this.number' | cut -d'[' -f 2 | cut -d']' -f 1`
+  echo "Pull Request: ${pull}"
 
   if [[ ${pull} &gt; ${max} ]]
   then
 
-    echo &quot;Pushing changes to OpenShift&quot;
+    echo "Pushing changes to OpenShift"
 
     git clone ${OPENSHIFT_GIT} ${TMP_DIR}/${APP_NAME}
 
@@ -68,7 +69,7 @@ then
 
     git remote add upstream ${SOURCE_GIT}
 
-    sed -i &apos;s/\/upstream\/*/\/upstream\/*\n\tfetch = +refs\/pull\/*\/head:refs\/pull\/upstream\//g&apos; ${TMP_DIR}/${APP_NAME}/.git/config
+    sed -i 's/\/upstream\/*/\/upstream\/*\n\tfetch = +refs\/pull\/*\/head:refs\/pull\/upstream\//g' ${TMP_DIR}/${APP_NAME}/.git/config
 
     git fetch upstream
 
@@ -76,16 +77,18 @@ then
 
     git checkout master
 
-    git merge ${pull} -m &quot;test&quot; -X theirs
+    git merge ${pull} -m "test" -X theirs
 
     git push
 
-    echo &quot;${pull}&quot; &gt; &quot;${PULL_FILE}&quot;
+    echo "${pull}" &gt; "${PULL_FILE}"
 
     popd
   else
-    echo &quot;${KEY} not found. No additional processing in post-receive hook&quot;
+    echo "No unprocessed pull requests"
   fi
+else
+    echo "${KEY} not found. No additional processing in post-receive hook"
 fi
 
 rm -rf ${TMP_DIR}/${APP_NAME}</command>
